@@ -1,6 +1,6 @@
 {
   "name": "haraka-plugin-rspamd",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Haraka plugin for rspamd",
   "main": "index.js",
   "scripts": {
@@ -34,8 +34,7 @@
   },
   "dependencies": {
     "haraka-dsn": "^1.1.0",
-    "libmime": "^5.3.7",
-    "punycode.js": "^2.3.1"
+    "libmime": "^5.3.7"
   },
   "files": [
     "CHANGELOG.md",
