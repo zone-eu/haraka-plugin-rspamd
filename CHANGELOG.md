@@ -4,6 +4,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+## [1.4.3](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.2...v1.4.3) (2025-12-15)
+
+
+### Bug Fixes
+
+* strip invalid bytes from MAIL FROM address ([#40](https://github.com/zone-eu/haraka-plugin-rspamd/issues/40)) ([fb5889e](https://github.com/zone-eu/haraka-plugin-rspamd/commit/fb5889e6d459331496c40452575acdcfa628d5b5))
+* strip invalid bytes from MAIL FROM address ([#40](https://github.com/zone-eu/haraka-plugin-rspamd/issues/40)) ([d209ea4](https://github.com/zone-eu/haraka-plugin-rspamd/commit/d209ea45ca770087932b53ce5a4b5f5db8394fee))
+* ZMSA-35: remove publish workflow, add release please manifests ([#2](https://github.com/zone-eu/haraka-plugin-rspamd/issues/2)) ([9249bd7](https://github.com/zone-eu/haraka-plugin-rspamd/commit/9249bd797aa922dafe60e01fcd5b2efbc314e317))
+* ZMSA-35: setup project from fork, Call next only once when request finishes ([#1](https://github.com/zone-eu/haraka-plugin-rspamd/issues/1)) ([158307d](https://github.com/zone-eu/haraka-plugin-rspamd/commit/158307ddb4f72ff16a8001cc17a4f933595400ff))
+
 ### [1.4.2] - 2025-11-17
 
 - revert #45, #43, #40
