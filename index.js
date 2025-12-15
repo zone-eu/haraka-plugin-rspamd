@@ -214,13 +214,26 @@ exports.hook_data_post = function (next, connection) {
   let timer
   const timeout = plugin.cfg.main.timeout || plugin.timeout - 1
 
+  let req
+
   let calledNext = false
   function nextOnce(code, msg) {
+    if (req) {
+      req.destroy()
+    }
+
     clearTimeout(timer)
     if (calledNext) return
     calledNext = true
     if (!connection?.transaction) return
-    next(code, msg)
+
+    connection.transaction.message_stream.on('data', () => {
+      // drain
+    })
+
+    connection.transaction.message_stream.once('end', () => {
+      next(code, msg)
+    })
   }
 
   timer = setTimeout(() => {
@@ -233,7 +246,7 @@ exports.hook_data_post = function (next, connection) {
 
   const start = Date.now()
 
-  const req = http.request(plugin.get_options(connection), (res) => {
+  req = http.request(plugin.get_options(connection), (res) => {
     let rawData = ''
 
     res.on('data', (chunk) => {
