@@ -4,6 +4,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+## [1.4.5](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.4...v1.4.5) (2025-12-15)
+
+
+### Bug Fixes
+
+* ZMSA-35: fix cannot pipe while piping in downstream plugins ([#6](https://github.com/zone-eu/haraka-plugin-rspamd/issues/6)) ([8feb886](https://github.com/zone-eu/haraka-plugin-rspamd/commit/8feb8868a766b953e9038a03846761491d7f23a8))
+
 ## [1.4.4](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.3...v1.4.4) (2025-12-15)
 
 
