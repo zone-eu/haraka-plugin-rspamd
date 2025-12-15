@@ -1,6 +1,6 @@
 {
   "name": "haraka-plugin-zone-eu-rspamd",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "description": "Haraka plugin for rspamd",
   "main": "index.js",
   "scripts": {
