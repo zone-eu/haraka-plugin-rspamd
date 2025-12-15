@@ -1,7 +1,7 @@
 [![Build Status][ci-img]][ci-url]
 [![Code Climate][clim-img]][clim-url]
 
-# haraka-plugin-rspamd
+# haraka-plugin-zone-eu-rspamd
 
 This plugin facilitates scanning messages with Rspamd.
 
