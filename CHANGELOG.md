@@ -4,6 +4,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+## [1.4.6](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.5...v1.4.6) (2025-12-16)
+
+
+### Bug Fixes
+
+* ZMSA-35: remove unnecessary explicit req.end() ([#8](https://github.com/zone-eu/haraka-plugin-rspamd/issues/8)) ([01973a1](https://github.com/zone-eu/haraka-plugin-rspamd/commit/01973a151da7a6cf4210a08d45bb1c03e38e5d44))
+
 ## [1.4.5](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.4...v1.4.5) (2025-12-15)
 
 ### Bug Fixes
