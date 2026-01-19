@@ -127,8 +127,10 @@ exports.get_options = function (connection) {
 
   if (connection.transaction.mail_from) {
     const mailFrom = connection.transaction.mail_from
-    const localPart = mailFrom.user || ''
-    const domain = mailFrom.original_host || mailFrom.host || ''
+    const address = mailFrom.address().toString()
+    const atIndex = address.lastIndexOf('@')
+    const localPart = atIndex === -1 ? address : address.slice(0, atIndex)
+    const domain = atIndex === -1 ? '' : address.slice(atIndex + 1)
     const normalizedLocal = hasNonAscii(localPart)
       ? INVALID_LOCAL_PART
       : localPart
