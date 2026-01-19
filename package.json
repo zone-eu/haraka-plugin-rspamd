@@ -32,11 +32,12 @@
   },
   "homepage": "https://github.com/zone-eu/haraka-plugin-rspamd#readme",
   "devDependencies": {
-    "@haraka/eslint-config": "^2.0.3",
-    "haraka-test-fixtures": "^1.3.10"
+    "@haraka/eslint-config": "2.0.3",
+    "haraka-test-fixtures": "1.3.10"
   },
   "dependencies": {
-    "haraka-dsn": "^1.1.0"
+    "haraka-dsn": "1.1.0",
+    "punycode.js": "2.3.1"
   },
   "files": [
     "CHANGELOG.md",
