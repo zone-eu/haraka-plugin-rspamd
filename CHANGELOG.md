@@ -4,6 +4,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+## [1.4.7](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.6...v1.4.7) (2026-01-20)
+
+
+### Bug Fixes
+
+* ZMSA-59: don't allow non-ascii helo hosts to get to rspamd, non utf-8 domain part of address cast to punycode ([#10](https://github.com/zone-eu/haraka-plugin-rspamd/issues/10)) ([26aa0ed](https://github.com/zone-eu/haraka-plugin-rspamd/commit/26aa0edfa45081041adaff4e3dd53169f2c9124d))
+
 ## [1.4.6](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.5...v1.4.6) (2025-12-16)
 
 
