@@ -3,8 +3,23 @@
 // node built-ins
 const http = require('node:http')
 
+const punycode = require('punycode.js')
+
 // haraka libs
 const DSN = require('haraka-dsn')
+
+// eslint-disable-next-line no-control-regex
+const NON_ASCII_REGEX = /[^\x00-\x7F]/
+const INVALID_LOCAL_PART = 'utf8-local-part'
+
+function hasNonAscii(value) {
+  return typeof value === 'string' && NON_ASCII_REGEX.test(value)
+}
+
+function toAsciiDomain(value) {
+  if (!value || !hasNonAscii(value)) return value
+  return punycode.toASCII(value)
+}
 
 exports.register = function () {
   this.load_rspamd_ini()
@@ -96,7 +111,9 @@ exports.get_options = function (connection) {
     }
   }
 
-  if (connection.hello.host) options.headers.Helo = connection.hello.host
+  if (connection.hello.host) {
+    options.headers.Helo = toAsciiDomain(connection.hello.host)
+  }
 
   let spf = connection.transaction.results.get('spf')
   if (spf && spf.result) {
@@ -109,7 +126,18 @@ exports.get_options = function (connection) {
   }
 
   if (connection.transaction.mail_from) {
-    const mfaddr = connection.transaction.mail_from.address().toString()
+    const mailFrom = connection.transaction.mail_from
+    const address = mailFrom.address().toString()
+    const atIndex = address.lastIndexOf('@')
+    const localPart = atIndex === -1 ? address : address.slice(0, atIndex)
+    const domain = atIndex === -1 ? '' : address.slice(atIndex + 1)
+    const normalizedLocal = hasNonAscii(localPart)
+      ? INVALID_LOCAL_PART
+      : localPart
+    const normalizedDomain = toAsciiDomain(domain)
+    const mfaddr = normalizedDomain
+      ? `${normalizedLocal}@${normalizedDomain}`
+      : normalizedLocal
 
     if (mfaddr) options.headers.From = mfaddr
   }

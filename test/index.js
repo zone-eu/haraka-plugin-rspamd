@@ -3,6 +3,8 @@
 const assert = require('node:assert')
 const fs = require('node:fs')
 
+const { Address } = require('address-rfc2821')
+
 const fixtures = require('haraka-test-fixtures')
 const connection = fixtures.connection
 
@@ -137,6 +139,43 @@ describe('parse_response', function () {
 
   it('returns undef on empty object', function (done) {
     assert.equal(this.plugin.parse_response('{}', this.connection), undefined)
+    done()
+  })
+})
+
+describe('get_options', function () {
+  beforeEach(_set_up)
+
+  it('punycodes non-ascii helo host', function (done) {
+    this.connection.hello.host = 'm\u00fcnchen.example'
+
+    const options = this.plugin.get_options(this.connection)
+
+    assert.equal(options.headers.Helo, 'xn--mnchen-3ya.example')
+    done()
+  })
+
+  it('punycodes non-ascii domain in mail_from', function (done) {
+    this.connection.transaction.mail_from = new Address(
+      'sender',
+      'b\u00fccher.example',
+    )
+
+    const options = this.plugin.get_options(this.connection)
+
+    assert.equal(options.headers.From, 'sender@xn--bcher-kva.example')
+    done()
+  })
+
+  it('replaces non-ascii local part in mail_from', function (done) {
+    this.connection.transaction.mail_from = new Address(
+      'm\u00fcnchen',
+      'example.com',
+    )
+
+    const options = this.plugin.get_options(this.connection)
+
+    assert.equal(options.headers.From, 'utf8-local-part@example.com')
     done()
   })
 })
