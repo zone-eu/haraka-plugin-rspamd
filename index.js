@@ -184,7 +184,7 @@ function buildHttpRequest(options, bodyBuffer) {
  * Collect the message stream into a Buffer, then open a raw TCP socket,
  * write the HTTP request with UTF-8 headers, and parse the response.
  */
-function rawHttpRequest(options, bodyBuffer) {
+function rawHttpRequest(options, bodyBuffer, timeoutMs) {
   return new Promise((resolve, reject) => {
     const requestBuffer = buildHttpRequest(options, bodyBuffer)
 
@@ -192,7 +192,9 @@ function rawHttpRequest(options, bodyBuffer) {
       ? net.createConnection(options.socketPath)
       : net.createConnection(options.port, options.host)
 
-    socket.setTimeout(0)
+    socket.setTimeout(timeoutMs, () => {
+      socket.destroy(new Error('socket timeout'))
+    })
 
     let rawResponse = Buffer.alloc(0)
 
@@ -336,7 +338,7 @@ exports.hook_data_post = function (next, connection) {
 
         let rawData
         try {
-          rawData = await rawHttpRequest(options, bodyBuffer)
+          rawData = await rawHttpRequest(options, bodyBuffer, timeout * 1000)
         } catch (err) {
           if (!connection?.transaction) return nextOnce()
           connection.transaction.results.add(PLUGIN_NAME, { err: err.message })
