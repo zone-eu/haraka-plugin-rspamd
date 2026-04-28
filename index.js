@@ -100,7 +100,6 @@ exports.get_options = function (connection) {
   }
 
   if (connection.hello.host) {
-    // do not punycode - send raw UTF-8 value over TCP socket
     options.headers.Helo = connection.hello.host
   }
 
