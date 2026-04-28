@@ -11,6 +11,7 @@ const DSN = require('haraka-dsn')
 // eslint-disable-next-line no-control-regex
 const NON_ASCII_REGEX = /[^\x00-\x7F]/
 const INVALID_LOCAL_PART = 'utf8-local-part'
+const PLUGIN_NAME = 'rspamd'
 
 function hasNonAscii(value) {
   return typeof value === 'string' && NON_ASCII_REGEX.test(value)
@@ -254,7 +255,7 @@ exports.hook_data_post = function (next, connection) {
 
   timer = setTimeout(() => {
     if (!connection?.transaction) return
-    connection.transaction.results.add(plugin, { err: 'timeout' })
+    connection.transaction.results.add(PLUGIN_NAME, { err: 'timeout' })
     if (plugin.cfg.defer.timeout)
       return nextOnce(DENYSOFT, 'Rspamd scan timeout')
     nextOnce()
@@ -282,9 +283,11 @@ exports.hook_data_post = function (next, connection) {
       r.log.emit = true // spit out a log entry
       r.log.time = (Date.now() - start) / 1000
 
-      connection.transaction.results.add(plugin, r.log)
+      connection.transaction.results.add(PLUGIN_NAME, r.log)
       if (r.data.symbols)
-        connection.transaction.results.add(plugin, { symbols: r.data.symbols })
+        connection.transaction.results.add(PLUGIN_NAME, {
+          symbols: r.data.symbols,
+        })
 
       const smtp_message = plugin.get_smtp_message(r)
 
@@ -314,7 +317,7 @@ exports.hook_data_post = function (next, connection) {
 
   req.on('error', (err) => {
     hasError = true
-    connection.transaction.results.add(plugin, { err: err.message })
+    connection.transaction.results.add(PLUGIN_NAME, { err: err.message })
   })
 
   req.on('close', () => {
@@ -334,17 +337,17 @@ exports.should_check = function (connection) {
   let result = true // default
 
   if (this.cfg.check.authenticated == false && connection.notes.auth_user) {
-    connection.transaction.results.add(this, { skip: 'authed' })
+    connection.transaction.results.add(PLUGIN_NAME, { skip: 'authed' })
     result = false
   }
 
   if (this.cfg.check.relay == false && connection.relaying) {
-    connection.transaction.results.add(this, { skip: 'relay' })
+    connection.transaction.results.add(PLUGIN_NAME, { skip: 'relay' })
     result = false
   }
 
   if (this.cfg.check.local_ip == false && connection.remote.is_local) {
-    connection.transaction.results.add(this, { skip: 'local_ip' })
+    connection.transaction.results.add(PLUGIN_NAME, { skip: 'local_ip' })
     result = false
   }
 
@@ -352,7 +355,7 @@ exports.should_check = function (connection) {
     if (this.cfg.check.local_ip == true && connection.remote.is_local) {
       // local IPs are included in private IPs
     } else {
-      connection.transaction.results.add(this, { skip: 'private_ip' })
+      connection.transaction.results.add(PLUGIN_NAME, { skip: 'private_ip' })
       result = false
     }
   }
@@ -442,7 +445,7 @@ exports.parse_response = function (rawData, connection) {
   try {
     data = JSON.parse(rawData)
   } catch (err) {
-    connection.transaction.results.add(this, {
+    connection.transaction.results.add(PLUGIN_NAME, {
       err: `parse failure: ${err.message}`,
     })
     return
@@ -451,7 +454,7 @@ exports.parse_response = function (rawData, connection) {
   if (Object.keys(data).length === 0) return
 
   if (Object.keys(data).length === 1 && data.error) {
-    connection.transaction.results.add(this, { err: data.error })
+    connection.transaction.results.add(PLUGIN_NAME, { err: data.error })
     return
   }
 
