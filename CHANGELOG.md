@@ -4,6 +4,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+## [1.4.9](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.8...v1.4.9) (2026-04-28)
+
+
+### Bug Fixes
+
+* ZMS-56: use raw tcp socket for sending data instead of node http ([#14](https://github.com/zone-eu/haraka-plugin-rspamd/issues/14)) ([53cd565](https://github.com/zone-eu/haraka-plugin-rspamd/commit/53cd565465343c9da7cc2ef7055e7d3f36185e91))
+
 ## [1.4.8](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.7...v1.4.8) (2026-04-28)
 
 
