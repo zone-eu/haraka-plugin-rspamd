@@ -1,26 +1,13 @@
 'use strict'
 
 // node built-ins
-const http = require('node:http')
-
-const punycode = require('punycode.js')
+const net = require('node:net')
+const { Writable } = require('node:stream')
 
 // haraka libs
 const DSN = require('haraka-dsn')
 
-// eslint-disable-next-line no-control-regex
-const NON_ASCII_REGEX = /[^\x00-\x7F]/
-const INVALID_LOCAL_PART = 'utf8-local-part'
 const PLUGIN_NAME = 'rspamd'
-
-function hasNonAscii(value) {
-  return typeof value === 'string' && NON_ASCII_REGEX.test(value)
-}
-
-function toAsciiDomain(value) {
-  if (!value || !hasNonAscii(value)) return value
-  return punycode.toASCII(value)
-}
 
 exports.register = function () {
   this.load_rspamd_ini()
@@ -113,7 +100,7 @@ exports.get_options = function (connection) {
   }
 
   if (connection.hello.host) {
-    options.headers.Helo = toAsciiDomain(connection.hello.host)
+    options.headers.Helo = connection.hello.host
   }
 
   let spf = connection.transaction.results.get('spf')
@@ -127,18 +114,7 @@ exports.get_options = function (connection) {
   }
 
   if (connection.transaction.mail_from) {
-    const mailFrom = connection.transaction.mail_from
-    const address = mailFrom.address().toString()
-    const atIndex = address.lastIndexOf('@')
-    const localPart = atIndex === -1 ? address : address.slice(0, atIndex)
-    const domain = atIndex === -1 ? '' : address.slice(atIndex + 1)
-    const normalizedLocal = hasNonAscii(localPart)
-      ? INVALID_LOCAL_PART
-      : localPart
-    const normalizedDomain = toAsciiDomain(domain)
-    const mfaddr = normalizedDomain
-      ? `${normalizedLocal}@${normalizedDomain}`
-      : normalizedLocal
+    const mfaddr = connection.transaction.mail_from.address().toString()
 
     if (mfaddr) options.headers.From = mfaddr
   }
@@ -165,6 +141,84 @@ exports.get_options = function (connection) {
   }
 
   return options
+}
+
+/**
+ * Build a raw HTTP/1.1 request as a Buffer, encoding headers as UTF-8.
+ * Node's built-in http module rejects non-ASCII header values, so write the
+ * request manually over a TCP socket.
+ */
+function buildHttpRequest(options, bodyBuffer) {
+  const host = options.socketPath
+    ? 'localhost'
+    : `${options.host}:${options.port}`
+
+  const headerLines = [
+    `POST ${options.path} HTTP/1.1`,
+    `Host: ${host}`,
+    'Content-Type: message/rfc822',
+    `Content-Length: ${bodyBuffer.length}`,
+    'Connection: close',
+  ]
+
+  for (const [key, value] of Object.entries(options.headers)) {
+    if (Array.isArray(value)) {
+      for (const v of value) {
+        headerLines.push(`${key}: ${v}`)
+      }
+    } else if (value !== null && typeof value === 'object') {
+      // e.g. SPF: { result: 'pass' } -> SPF: pass
+      headerLines.push(`${key}: ${Object.values(value).join(' ')}`)
+    } else {
+      headerLines.push(`${key}: ${value}`)
+    }
+  }
+
+  headerLines.push('', '')
+
+  const headerBuffer = Buffer.from(headerLines.join('\r\n'), 'utf8')
+  return Buffer.concat([headerBuffer, bodyBuffer])
+}
+
+/**
+ * Collect the message stream into a Buffer, then open a raw TCP socket,
+ * write the HTTP request with UTF-8 headers, and parse the response.
+ */
+function rawHttpRequest(options, bodyBuffer, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const requestBuffer = buildHttpRequest(options, bodyBuffer)
+
+    const socket = options.socketPath
+      ? net.createConnection(options.socketPath)
+      : net.createConnection(options.port, options.host)
+
+    socket.setTimeout(timeoutMs, () => {
+      socket.destroy(new Error('socket timeout'))
+    })
+
+    let rawResponse = Buffer.alloc(0)
+
+    socket.on('connect', () => {
+      socket.write(requestBuffer)
+    })
+
+    socket.on('data', (chunk) => {
+      rawResponse = Buffer.concat([rawResponse, chunk])
+    })
+
+    socket.on('end', () => {
+      const separator = rawResponse.indexOf('\r\n\r\n')
+      if (separator === -1) {
+        return reject(
+          new Error('Invalid HTTP response: no header/body separator'),
+        )
+      }
+      const body = rawResponse.slice(separator + 4).toString('utf8')
+      resolve(body)
+    })
+
+    socket.on('error', reject)
+  })
 }
 
 exports.get_smtp_message = function (r) {
@@ -262,75 +316,88 @@ exports.hook_data_post = function (next, connection) {
   }, timeout * 1000)
 
   const start = Date.now()
+  const options = plugin.get_options(connection)
 
-  const req = http.request(plugin.get_options(connection), (res) => {
-    let rawData = ''
+  // collect the message stream into a buffer first, then send over raw socket
+  const chunks = []
+  const messageStream = connection.transaction.message_stream
 
-    res.on('data', (chunk) => {
-      rawData += chunk
-    })
+  messageStream.pipe(
+    (() => {
+      const writable = new Writable({
+        write(chunk, _enc, cb) {
+          chunks.push(chunk)
+          cb()
+        },
+      })
 
-    res.on('end', () => {
-      if (!connection.transaction) return nextOnce() //client gone
+      writable.on('finish', async () => {
+        if (!connection.transaction) return nextOnce()
 
-      const r = plugin.parse_response(rawData, connection)
-      if (!r || !r.data || !r.log) {
+        const bodyBuffer = Buffer.concat(chunks)
+
+        let rawData
+        try {
+          rawData = await rawHttpRequest(options, bodyBuffer, timeout * 1000)
+        } catch (err) {
+          if (!connection?.transaction) return nextOnce()
+          connection.transaction.results.add(PLUGIN_NAME, { err: err.message })
+          if (plugin.cfg.defer.error)
+            return nextOnce(DENYSOFT, 'Rspamd scan error')
+          return nextOnce()
+        }
+
+        if (!connection.transaction) return nextOnce()
+
+        const r = plugin.parse_response(rawData, connection)
+        if (!r || !r.data || !r.log) {
+          if (plugin.cfg.defer.error)
+            return nextOnce(DENYSOFT, 'Rspamd scan error')
+          return nextOnce()
+        }
+
+        r.log.emit = true // spit out a log entry
+        r.log.time = (Date.now() - start) / 1000
+
+        connection.transaction.results.add(PLUGIN_NAME, r.log)
+        if (r.data.symbols)
+          connection.transaction.results.add(PLUGIN_NAME, {
+            symbols: r.data.symbols,
+          })
+
+        const smtp_message = plugin.get_smtp_message(r)
+
+        plugin.do_rewrite(connection, r.data)
+
+        if (plugin.cfg.soft_reject.enabled && r.data.action === 'soft reject') {
+          nextOnce(
+            DENYSOFT,
+            DSN.sec_unauthorized(
+              smtp_message || plugin.cfg.soft_reject.message,
+              451,
+            ),
+          )
+        } else if (plugin.wants_reject(connection, r.data)) {
+          nextOnce(DENY, smtp_message || plugin.cfg.reject.message)
+        } else {
+          plugin.add_dkim_header(connection, r.data)
+          plugin.do_milter_headers(connection, r.data)
+          plugin.add_headers(connection, r.data)
+
+          nextOnce()
+        }
+      })
+
+      writable.on('error', (err) => {
+        connection.transaction?.results.add(PLUGIN_NAME, { err: err.message })
         if (plugin.cfg.defer.error)
           return nextOnce(DENYSOFT, 'Rspamd scan error')
-        return nextOnce()
-      }
-
-      r.log.emit = true // spit out a log entry
-      r.log.time = (Date.now() - start) / 1000
-
-      connection.transaction.results.add(PLUGIN_NAME, r.log)
-      if (r.data.symbols)
-        connection.transaction.results.add(PLUGIN_NAME, {
-          symbols: r.data.symbols,
-        })
-
-      const smtp_message = plugin.get_smtp_message(r)
-
-      plugin.do_rewrite(connection, r.data)
-
-      if (plugin.cfg.soft_reject.enabled && r.data.action === 'soft reject') {
-        nextOnce(
-          DENYSOFT,
-          DSN.sec_unauthorized(
-            smtp_message || plugin.cfg.soft_reject.message,
-            451,
-          ),
-        )
-      } else if (plugin.wants_reject(connection, r.data)) {
-        nextOnce(DENY, smtp_message || plugin.cfg.reject.message)
-      } else {
-        plugin.add_dkim_header(connection, r.data)
-        plugin.do_milter_headers(connection, r.data)
-        plugin.add_headers(connection, r.data)
-
         nextOnce()
-      }
-    })
-  })
+      })
 
-  let hasError
-
-  req.on('error', (err) => {
-    hasError = true
-    connection.transaction.results.add(PLUGIN_NAME, { err: err.message })
-  })
-
-  req.on('close', () => {
-    if (!connection?.transaction) return nextOnce() // client gone
-
-    if (plugin.cfg.defer.error && hasError)
-      return nextOnce(DENYSOFT, 'Rspamd scan error')
-
-    nextOnce()
-  })
-
-  connection.transaction.message_stream.pipe(req)
-  // pipe calls req.end() asynchronously
+      return writable
+    })(),
+  )
 }
 
 exports.should_check = function (connection) {
