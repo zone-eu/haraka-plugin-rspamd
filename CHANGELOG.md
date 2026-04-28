@@ -4,6 +4,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+## [1.4.8](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.7...v1.4.8) (2026-04-28)
+
+
+### Bug Fixes
+
+* use rspamd as the results key ([#12](https://github.com/zone-eu/haraka-plugin-rspamd/issues/12)) ([fd21229](https://github.com/zone-eu/haraka-plugin-rspamd/commit/fd21229fbc39ff4f1bf42e31db092960bd63b22a))
+
 ## [1.4.7](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.6...v1.4.7) (2026-01-20)
 
 
