@@ -4,6 +4,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+## [1.4.10](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.9...v1.4.10) (2026-04-29)
+
+
+### Bug Fixes
+
+* ZMS-56: change plugin name on the plugin object, pass it to results ([#16](https://github.com/zone-eu/haraka-plugin-rspamd/issues/16)) ([d70a04e](https://github.com/zone-eu/haraka-plugin-rspamd/commit/d70a04e75b20138c7778dc1cd8f8acaebc4abc85))
+
 ## [1.4.9](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.8...v1.4.9) (2026-04-28)
 
 
