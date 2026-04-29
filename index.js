@@ -290,6 +290,7 @@ exports.do_milter_headers = function (connection, data) {
 
 exports.hook_data_post = function (next, connection) {
   const plugin = this
+  plugin.name = PLUGIN_NAME
 
   if (!connection.transaction) return next()
   if (!plugin.should_check(connection)) return next()
@@ -309,7 +310,7 @@ exports.hook_data_post = function (next, connection) {
 
   timer = setTimeout(() => {
     if (!connection?.transaction) return
-    connection.transaction.results.add(PLUGIN_NAME, { err: 'timeout' })
+    connection.transaction.results.add(plugin, { err: 'timeout' })
     if (plugin.cfg.defer.timeout)
       return nextOnce(DENYSOFT, 'Rspamd scan timeout')
     nextOnce()
@@ -341,7 +342,7 @@ exports.hook_data_post = function (next, connection) {
           rawData = await rawHttpRequest(options, bodyBuffer, timeout * 1000)
         } catch (err) {
           if (!connection?.transaction) return nextOnce()
-          connection.transaction.results.add(PLUGIN_NAME, { err: err.message })
+          connection.transaction.results.add(plugin, { err: err.message })
           if (plugin.cfg.defer.error)
             return nextOnce(DENYSOFT, 'Rspamd scan error')
           return nextOnce()
@@ -359,9 +360,9 @@ exports.hook_data_post = function (next, connection) {
         r.log.emit = true // spit out a log entry
         r.log.time = (Date.now() - start) / 1000
 
-        connection.transaction.results.add(PLUGIN_NAME, r.log)
+        connection.transaction.results.add(plugin, r.log)
         if (r.data.symbols)
-          connection.transaction.results.add(PLUGIN_NAME, {
+          connection.transaction.results.add(plugin, {
             symbols: r.data.symbols,
           })
 
@@ -389,7 +390,7 @@ exports.hook_data_post = function (next, connection) {
       })
 
       writable.on('error', (err) => {
-        connection.transaction?.results.add(PLUGIN_NAME, { err: err.message })
+        connection.transaction?.results.add(plugin, { err: err.message })
         if (plugin.cfg.defer.error)
           return nextOnce(DENYSOFT, 'Rspamd scan error')
         nextOnce()
@@ -401,20 +402,21 @@ exports.hook_data_post = function (next, connection) {
 }
 
 exports.should_check = function (connection) {
+  this.name = PLUGIN_NAME
   let result = true // default
 
   if (this.cfg.check.authenticated == false && connection.notes.auth_user) {
-    connection.transaction.results.add(PLUGIN_NAME, { skip: 'authed' })
+    connection.transaction.results.add(this, { skip: 'authed' })
     result = false
   }
 
   if (this.cfg.check.relay == false && connection.relaying) {
-    connection.transaction.results.add(PLUGIN_NAME, { skip: 'relay' })
+    connection.transaction.results.add(this, { skip: 'relay' })
     result = false
   }
 
   if (this.cfg.check.local_ip == false && connection.remote.is_local) {
-    connection.transaction.results.add(PLUGIN_NAME, { skip: 'local_ip' })
+    connection.transaction.results.add(this, { skip: 'local_ip' })
     result = false
   }
 
@@ -422,7 +424,7 @@ exports.should_check = function (connection) {
     if (this.cfg.check.local_ip == true && connection.remote.is_local) {
       // local IPs are included in private IPs
     } else {
-      connection.transaction.results.add(PLUGIN_NAME, { skip: 'private_ip' })
+      connection.transaction.results.add(this, { skip: 'private_ip' })
       result = false
     }
   }
@@ -507,12 +509,13 @@ exports.get_clean = function (data, connection) {
 
 exports.parse_response = function (rawData, connection) {
   if (!rawData) return
+  this.name = PLUGIN_NAME
 
   let data
   try {
     data = JSON.parse(rawData)
   } catch (err) {
-    connection.transaction.results.add(PLUGIN_NAME, {
+    connection.transaction.results.add(this, {
       err: `parse failure: ${err.message}`,
     })
     return
@@ -521,7 +524,7 @@ exports.parse_response = function (rawData, connection) {
   if (Object.keys(data).length === 0) return
 
   if (Object.keys(data).length === 1 && data.error) {
-    connection.transaction.results.add(PLUGIN_NAME, { err: data.error })
+    connection.transaction.results.add(this, { err: data.error })
     return
   }
 
