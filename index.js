@@ -114,7 +114,7 @@ exports.get_options = function (connection) {
   }
 
   if (connection.transaction.mail_from) {
-    const mfaddr = connection.transaction.mail_from.address().toString()
+    const mfaddr = connection.transaction.mail_from.address
 
     if (mfaddr) options.headers.From = mfaddr
   }
@@ -123,7 +123,7 @@ exports.get_options = function (connection) {
   if (rcpts) {
     options.headers.Rcpt = []
     for (const rcpt of rcpts) {
-      options.headers.Rcpt.push(rcpt.address())
+      options.headers.Rcpt.push(rcpt.address)
     }
 
     // for per-user options
