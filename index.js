@@ -358,7 +358,7 @@ exports.hook_data_post = function (next, connection) {
         }
 
         r.log.emit = true // spit out a log entry
-        r.log.time = (Date.now() - start) / 1000
+        r.log.time = (Date.now() - start) / 1000 // current time
 
         connection.transaction.results.add(plugin, r.log)
         if (r.data.symbols) {
@@ -372,14 +372,17 @@ exports.hook_data_post = function (next, connection) {
             {
               ...Object.fromEntries(
                 // log all fields from r.log except 'symbols', which is handled separately below
-                Object.entries(r.log).filter(([k]) => !['symbols'].includes(k))
+                Object.entries(r.log).filter(([k]) => !['symbols'].includes(k)),
               ),
               ...Object.fromEntries(
                 // log all symbols in uppercase with 'RSPAMD_' prefix
-                Object.entries(r.data.symbols).map(([key, val]) => ['_RSPAMD_' + key.toUpperCase(), val.score])
+                Object.entries(r.data.symbols).map(([key, val]) => [
+                  '_RSPAMD_' + key.toUpperCase(),
+                  val.score,
+                ]),
               ),
-            }
-          );
+            },
+          )
         }
 
         const smtp_message = plugin.get_smtp_message(r)
