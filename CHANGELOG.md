@@ -4,6 +4,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+## [2.0.0](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.10...v2.0.0) (2026-06-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* fix formatting, add comment ([#21](https://github.com/zone-eu/haraka-plugin-rspamd/issues/21))
+
+### Features
+
+* fix formatting, add comment ([#21](https://github.com/zone-eu/haraka-plugin-rspamd/issues/21)) ([e9e4e54](https://github.com/zone-eu/haraka-plugin-rspamd/commit/e9e4e5483c5aad47e259a3b916a7824660e30df5))
+
+
+### Bug Fixes
+
+* Log rspamd symbols to graylog ([#18](https://github.com/zone-eu/haraka-plugin-rspamd/issues/18)) ([8c90197](https://github.com/zone-eu/haraka-plugin-rspamd/commit/8c901973d107c76ff0c2016f24439fa33bb23085))
+* Support @haraka/email-address ([#19](https://github.com/zone-eu/haraka-plugin-rspamd/issues/19)) ([73fc543](https://github.com/zone-eu/haraka-plugin-rspamd/commit/73fc54331fc7c17782a8a07eda8473870a4f0dbe))
+
 ## [1.4.10](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.9...v1.4.10) (2026-04-29)
 
 
