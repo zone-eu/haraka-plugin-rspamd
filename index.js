@@ -361,10 +361,26 @@ exports.hook_data_post = function (next, connection) {
         r.log.time = (Date.now() - start) / 1000
 
         connection.transaction.results.add(plugin, r.log)
-        if (r.data.symbols)
+        if (r.data.symbols) {
           connection.transaction.results.add(plugin, {
             symbols: r.data.symbols,
           })
+          connection.server.notes.loggelf?.info(
+            plugin,
+            connection,
+            `rspamd results (score: ${r.data.score})`,
+            {
+              ...Object.fromEntries(
+                // log all fields from r.log except 'symbols', which is handled separately below
+                Object.entries(r.log).filter(([k]) => !['symbols'].includes(k))
+              ),
+              ...Object.fromEntries(
+                // log all symbols in uppercase with 'RSPAMD_' prefix
+                Object.entries(r.data.symbols).map(([key, val]) => ['_RSPAMD_' + key.toUpperCase(), val.score])
+              ),
+            }
+          );
+        }
 
         const smtp_message = plugin.get_smtp_message(r)
 
