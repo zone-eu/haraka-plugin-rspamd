@@ -381,6 +381,7 @@ exports.hook_data_post = function (next, connection) {
                   val.score,
                 ]),
               ),
+              ...plugin.get_extra_log_fields(r.data.symbols),
             },
           )
         }
@@ -470,6 +471,33 @@ exports.wants_headers_added = function (rspamd_data) {
   // implicit add_headers=sometimes, based on rspamd response
   if (rspamd_data.action === 'add header') return true
   return false
+}
+
+exports.get_extra_log_fields = function (symbols) {
+  const fields = {}
+  const prefixes = {
+    AI_THINKS_: '_ai_thinks',
+    ARC_: '_arc',
+    DMARC_: '_dmarc',
+    NEURAL_: '_neural',
+    R_DKIM_: '_dkim',
+    R_SPF_: '_spf',
+  }
+
+  for (const key of Object.keys(symbols || {})) {
+    const name = key.toUpperCase()
+    for (const [prefix, field] of Object.entries(prefixes)) {
+      if (fields[field] !== undefined || !name.startsWith(prefix)) {
+        continue
+      }
+      const suffix = name.slice(prefix.length)
+      if (suffix) {
+        fields[field] = suffix
+      }
+    }
+  }
+
+  return fields
 }
 
 exports.get_clean = function (data, connection) {

@@ -126,6 +126,55 @@ describe('wants_headers_added', function () {
   })
 })
 
+describe('get_extra_log_fields', function () {
+  beforeEach(_set_up)
+
+  it('normalizes neural, SPF, and DMARC symbols for GELF', function (done) {
+    assert.deepEqual(
+      this.plugin.get_extra_log_fields({
+        NEURAL_HAM: { name: 'NEURAL_HAM', score: -2 },
+        R_SPF_ALLOW: { name: 'R_SPF_ALLOW', score: -0.2 },
+        DMARC_POLICY_ALLOW: { name: 'DMARC_POLICY_ALLOW', score: -0.5 },
+      }),
+      {
+        _neural: 'HAM',
+        _spf: 'ALLOW',
+        _dmarc: 'POLICY_ALLOW',
+      },
+    )
+    done()
+  })
+
+  it('uses any non-empty suffix after a configured prefix', function (done) {
+    const cases = [
+      ['NEURAL_CUSTOM_MODEL', '_neural', 'CUSTOM_MODEL'],
+      ['R_SPF_TEMPERROR', '_spf', 'TEMPERROR'],
+      ['DMARC_POLICY_REJECT', '_dmarc', 'POLICY_REJECT'],
+    ]
+
+    for (const [symbol, field, expected] of cases) {
+      assert.equal(
+        this.plugin.get_extra_log_fields({
+          [symbol]: { name: symbol, score: 0 },
+        })[field],
+        expected,
+      )
+    }
+    done()
+  })
+
+  it('ignores a bare prefix and unrelated symbols', function (done) {
+    assert.deepEqual(
+      this.plugin.get_extra_log_fields({
+        R_SPF_: { name: 'R_SPF_', score: 0 },
+        DKIM_TRACE: { name: 'DKIM_TRACE', score: 0 },
+      }),
+      {},
+    )
+    done()
+  })
+})
+
 describe('parse_response', function () {
   beforeEach(_set_up)
 
