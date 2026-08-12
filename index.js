@@ -365,25 +365,36 @@ exports.hook_data_post = function (next, connection) {
           connection.transaction.results.add(plugin, {
             symbols: r.data.symbols,
           })
-          connection.server.notes.loggelf?.info(
-            plugin,
-            connection,
-            `rspamd results (score: ${r.data.score})`,
-            {
-              ...Object.fromEntries(
-                // log all fields from r.log except 'symbols', which is handled separately below
-                Object.entries(r.log).filter(([k]) => !['symbols'].includes(k)),
-              ),
-              ...Object.fromEntries(
-                // log all symbols in uppercase with 'RSPAMD_' prefix
-                Object.entries(r.data.symbols).map(([key, val]) => [
-                  '_RSPAMD_' + key.toUpperCase(),
-                  val.score,
-                ]),
-              ),
-              ...plugin.get_extra_log_fields(r.data.symbols),
-            },
-          )
+          try {
+            const join_opts = (opts) => {
+              if (typeof opts === 'object' && typeof opts.join === 'function') {
+                return opts.join(';');
+              } else {
+                return '';
+              }
+            };
+            connection.server.notes.loggelf?.info(
+              plugin,
+              connection,
+              `rspamd results (score: ${r.data.score})`,
+              {
+                ...Object.fromEntries(
+                  // log all fields from r.log except 'symbols', which is handled separately below
+                  Object.entries(r.log).filter(([k]) => !['symbols'].includes(k)),
+                ),
+                ...Object.fromEntries(
+                  // log all symbols in uppercase with 'RSPAMD_' prefix
+                  Object.entries(r.data.symbols).map(([key, val]) => [
+                    '_RSPAMD_' + key.toUpperCase(),
+                    `(${val.score}){` + join_opts(val.options) + '}',
+                  ]),
+                ),
+                ...plugin.get_extra_log_fields(r.data.symbols),
+              },
+            )
+          } catch (err) {
+            connection.logerror(plugin, `failed to graylog symbols: ${err}`)
+          }
         }
 
         const smtp_message = plugin.get_smtp_message(r)
