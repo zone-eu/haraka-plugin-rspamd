@@ -365,24 +365,36 @@ exports.hook_data_post = function (next, connection) {
           connection.transaction.results.add(plugin, {
             symbols: r.data.symbols,
           })
-          connection.server.notes.loggelf?.info(
-            plugin,
-            connection,
-            `rspamd results (score: ${r.data.score})`,
-            {
-              ...Object.fromEntries(
-                // log all fields from r.log except 'symbols', which is handled separately below
-                Object.entries(r.log).filter(([k]) => !['symbols'].includes(k)),
-              ),
-              ...Object.fromEntries(
-                // log all symbols in uppercase with 'RSPAMD_' prefix
-                Object.entries(r.data.symbols).map(([key, val]) => [
-                  '_RSPAMD_' + key.toUpperCase(),
-                  val.score,
-                ]),
-              ),
-            },
-          )
+          try {
+            const join_opts = (opts) => {
+              if (typeof opts === 'object' && typeof opts.join === 'function') {
+                return opts.join(';');
+              } else {
+                return '';
+              }
+            };
+            connection.server.notes.loggelf?.info(
+              plugin,
+              connection,
+              `rspamd results (score: ${r.data.score})`,
+              {
+                ...Object.fromEntries(
+                  // log all fields from r.log except 'symbols', which is handled separately below
+                  Object.entries(r.log).filter(([k]) => !['symbols'].includes(k)),
+                ),
+                ...Object.fromEntries(
+                  // log all symbols in uppercase with 'RSPAMD_' prefix
+                  Object.entries(r.data.symbols).map(([key, val]) => [
+                    '_RSPAMD_' + key.toUpperCase(),
+                    `(${val.score}){` + join_opts(val.options) + '}',
+                  ]),
+                ),
+                ...plugin.get_extra_log_fields(r.data.symbols),
+              },
+            )
+          } catch (err) {
+            connection.logerror(plugin, `failed to graylog symbols: ${err}`)
+          }
         }
 
         const smtp_message = plugin.get_smtp_message(r)
@@ -470,6 +482,33 @@ exports.wants_headers_added = function (rspamd_data) {
   // implicit add_headers=sometimes, based on rspamd response
   if (rspamd_data.action === 'add header') return true
   return false
+}
+
+exports.get_extra_log_fields = function (symbols) {
+  const fields = {}
+  const prefixes = {
+    AI_THINKS_: '_ai_thinks',
+    ARC_: '_arc',
+    DMARC_: '_dmarc',
+    NEURAL_: '_neural',
+    R_DKIM_: '_dkim',
+    R_SPF_: '_spf',
+  }
+
+  for (const key of Object.keys(symbols || {})) {
+    const name = key.toUpperCase()
+    for (const [prefix, field] of Object.entries(prefixes)) {
+      if (fields[field] !== undefined || !name.startsWith(prefix)) {
+        continue
+      }
+      const suffix = name.slice(prefix.length)
+      if (suffix) {
+        fields[field] = suffix
+      }
+    }
+  }
+
+  return fields
 }
 
 exports.get_clean = function (data, connection) {
