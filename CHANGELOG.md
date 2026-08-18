@@ -4,6 +4,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+## [2.0.1](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v2.0.0...v2.0.1) (2026-08-17)
+
+
+### Bug Fixes
+
+* Gelf changes ([#22](https://github.com/zone-eu/haraka-plugin-rspamd/issues/22)) ([fb040a8](https://github.com/zone-eu/haraka-plugin-rspamd/commit/fb040a86443b56fc4801ad9e2a59a0d381a8a8b5))
+
 ## [2.0.0](https://github.com/zone-eu/haraka-plugin-rspamd/compare/v1.4.10...v2.0.0) (2026-06-16)
 
 
